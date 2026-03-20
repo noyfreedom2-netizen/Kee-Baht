@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>กี่บาท (Kee Baht) - Ware Horse Edition</title>
-    
+    <title>กี่บาท (Kee Baht) - Ware Horse Final</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;700&display=swap" rel="stylesheet">
-    
     <style>
         body { font-family: 'Noto Sans Thai', sans-serif; background: linear-gradient(135deg, #f0f4f8, #e0e8f0); display: flex; justify-content: center; padding: 20px; margin: 0; color: #333; }
         .container { background-color: white; padding: 25px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
@@ -16,25 +14,19 @@
         .section { background: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #eee; }
         h3 { margin-top: 0; color: #444; font-size: 16px; border-bottom: 2px solid #ddd; padding-bottom: 5px;}
         input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 16px; }
-        
         button { border: none; padding: 12px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-family: inherit; font-size: 16px; color: white; transition: 0.2s; width: 100%; margin-top: 5px;}
         button:active { transform: scale(0.98); }
-        
         .btn-add { background: #28a745; margin-bottom: 10px; font-size: 14px; }
         .btn-calc { background: #0056b3; padding: 15px; font-size: 18px; }
         .btn-reset { background: #dc3545; opacity: 0.8; }
         .btn-share { background: #00c300; margin-top: 15px; }
-        
         .list-box { font-size: 14px; color: #555; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
         .tag { background: #e9ecef; padding: 5px 10px; border-radius: 15px; display: inline-flex; align-items: center; gap: 5px; }
         .del-btn { color: red; cursor: pointer; font-weight: bold; }
-        
         .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
         .checkbox-group label { background: #e9ecef; padding: 5px 12px; border-radius: 15px; font-size: 14px; cursor: pointer; }
-        
         .item-row { background: white; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;}
         .running-total { font-size: 18px; font-weight: bold; color: #d9534f; text-align: right; margin-top: 10px; }
-        
         .result-box { background: #ffffff; padding: 20px; border-radius: 12px; margin-top: 25px; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.08); position: relative; border-top: 2px dashed #ccc; }
         .result-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #eee; padding: 12px 0; font-size: 16px; }
         .top-payer { color: #d9534f !important; font-weight: bold; font-size: 18px; }
@@ -57,9 +49,7 @@
         <h3>2. รายการอาหาร</h3>
         <input type="text" id="itemName" placeholder="ชื่อเมนู" onkeypress="if(event.key==='Enter') document.getElementById('itemPrice').focus()">
         <input type="number" id="itemPrice" placeholder="ราคา" onkeypress="if(event.key==='Enter') addItem()">
-        
         <div id="payerCheckboxes" class="checkbox-group"></div>
-        
         <button class="btn-add" onclick="addItem()">+ เพิ่มเมนู</button>
         <div id="itemsList"></div>
         <div id="totalAmountDisplay" class="running-total">ยอดรวม: 0 บาท</div>
@@ -71,7 +61,7 @@
     <div id="resultArea" class="result-box">
         <h3 style="text-align:center;">🧾 สรุปยอด</h3>
         <div id="finalResults"></div>
-        <button class="btn-share" onclick="shareToLine()">📲 ส่งเข้าแชทเพื่อน</button>
+        <button class="btn-share" id="btnShare" onclick="shareToLine()">📲 ส่งเข้าแชทเพื่อน</button>
     </div>
 </div>
 
@@ -80,16 +70,12 @@
     let items = [];  
     let finalSummaryText = "";
 
-    // 🔥 เริ่มต้น LIFF (ID ของนาย)
     liff.init({ liffId: "2009552231-fe9vH84e" }).then(() => {
-        console.log("LIFF Initialized");
-        // บังคับล็อกอินเพื่อขอสิทธิ์ Share Target Picker ทันทีที่เปิดแอป
         if (!liff.isLoggedIn()) {
             liff.login();
         }
     }).catch((err) => { 
-        console.error("LIFF Error", err);
-        alert("LIFF Error: " + err.message);
+        alert("LIFF Init Error: " + err.message);
     });
 
     function addPerson() {
@@ -119,9 +105,7 @@
         const nameInput = document.getElementById('itemName');
         const priceInput = document.getElementById('itemPrice');
         const eaters = Array.from(document.querySelectorAll('#payerCheckboxes input:checked')).map(cb => cb.value);
-
         if (!nameInput.value || !priceInput.value || eaters.length === 0) return alert("กรอกข้อมูลให้ครบดิวะ!");
-
         items.push({ name: nameInput.value, price: parseFloat(priceInput.value), eaters: eaters });
         nameInput.value = ''; priceInput.value = ''; nameInput.focus();
         updateItemsUI();
@@ -168,32 +152,27 @@
         document.getElementById('resultArea').style.display = 'block';
     }
 
-    // 🔥 ฟังก์ชันส่งเข้าแชทเพื่อน (แบบ Async ทันใจ)
-    async function shareToLine() {
+    // 🔥 แชร์เข้า LINE แบบ Force ลุยเลย ไม่ต้องเช็กสิทธิ์ซ้ำซ้อน
+    function shareToLine() {
         if (!liff.isLoggedIn()) {
             liff.login();
             return;
         }
 
-        if (liff.isApiAvailable('shareTargetPicker')) {
-            try {
-                const res = await liff.shareTargetPicker([
-                    {
-                        type: "text",
-                        text: finalSummaryText
-                    }
-                ]);
-                if (res) {
-                    console.log("ส่งสำเร็จ!");
-                    liff.closeWindow(); // ส่งเสร็จปิดหน้าต่างแอปเลย
-                }
-            } catch (error) {
-                console.log("ยกเลิกการส่ง หรือเกิดข้อผิดพลาด", error);
-                alert("เกิดข้อผิดพลาด: " + error.message);
+        liff.shareTargetPicker([
+            {
+                type: "text",
+                text: finalSummaryText
             }
-        } else {
-            alert("นายยังไม่ได้เปิดฟีเจอร์ Share Target Picker ในหน้า LINE Developers นะเพื่อน!");
-        }
+        ]).then((res) => {
+            if (res) {
+                liff.closeWindow(); 
+            } else {
+                console.log("User cancelled shareTargetPicker");
+            }
+        }).catch((error) => {
+            alert("Error: " + error.message + "\nลองปิด-เปิดแอปใหม่ดูเพื่อน!");
+        });
     }
 
     function resetApp() { if(confirm("เริ่มใหม่นะ?")) location.reload(); }
