@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>กี่บาท (Kee Baht) - LINE Edition</title>
+    
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Noto Sans Thai', sans-serif; background: linear-gradient(135deg, #f0f4f8, #e0e8f0); display: flex; justify-content: center; padding: 20px; margin: 0; color: #333; }
+        .container { background-color: white; padding: 25px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+        h1 { color: #0056b3; text-align: center; margin-bottom: 5px;}
+        p.subtitle { text-align: center; color: #666; margin-top: 0; margin-bottom: 25px; font-size: 14px;}
+        .section { background: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #eee; }
+        h3 { margin-top: 0; color: #444; font-size: 16px; border-bottom: 2px solid #ddd; padding-bottom: 5px;}
+        input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 16px; }
+        
+        button { border: none; padding: 12px 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-family: inherit; font-size: 16px; color: white; transition: 0.2s; width: 100%; margin-top: 5px;}
+        button:active { transform: scale(0.98); }
+        
+        .btn-add { background: #28a745; margin-bottom: 10px; font-size: 14px; }
+        .btn-calc { background: #0056b3; padding: 15px; font-size: 18px; }
+        .btn-reset { background: #dc3545; opacity: 0.8; }
+        .btn-share { background: #00c300; margin-top: 15px; } /* สีเขียว LINE */
+        
+        .list-box { font-size: 14px; color: #555; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag { background: #e9ecef; padding: 5px 10px; border-radius: 15px; display: inline-flex; align-items: center; gap: 5px; }
+        .del-btn { color: red; cursor: pointer; font-weight: bold; }
+        
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+        .checkbox-group label { background: #e9ecef; padding: 5px 12px; border-radius: 15px; font-size: 14px; cursor: pointer; }
+        
+        .item-row { background: white; padding: 10px; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;}
+        .running-total { font-size: 18px; font-weight: bold; color: #d9534f; text-align: right; margin-top: 10px; }
+        
+        .result-box { background: #ffffff; padding: 20px; border-radius: 12px; margin-top: 25px; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.08); position: relative; border-top: 2px dashed #ccc; }
+        .result-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #eee; padding: 12px 0; font-size: 16px; }
+        .top-payer { color: #d9534f !important; font-weight: bold; font-size: 18px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>กี่บาท?</h1>
+    <p class="subtitle">หารแฟร์ๆ สไตล์ "คนไทยทำอะไปเรื่อย"</p>
+
+    <div class="section">
+        <h3>1. ใครอยู่ในตี้บ้าง?</h3>
+        <input type="text" id="personName" placeholder="ชื่อเพื่อนแล้วกด Enter" onkeypress="if(event.key==='Enter') addPerson()">
+        <button class="btn-add" onclick="addPerson()">+ เพิ่มเพื่อน</button>
+        <div id="peopleList" class="list-box">ยังไม่มีใคร...</div>
+    </div>
+
+    <div class="section">
+        <h3>2. รายการอาหาร</h3>
+        <input type="text" id="itemName" placeholder="ชื่อเมนู" onkeypress="if(event.key==='Enter') document.getElementById('itemPrice').focus()">
+        <input type="number" id="itemPrice" placeholder="ราคา" onkeypress="if(event.key==='Enter') addItem()">
+        
+        <div id="payerCheckboxes" class="checkbox-group"></div>
+        
+        <button class="btn-add" onclick="addItem()">+ เพิ่มเมนู</button>
+        <div id="itemsList"></div>
+        <div id="totalAmountDisplay" class="running-total">ยอดรวม: 0 บาท</div>
+    </div>
+
+    <button class="btn-calc" onclick="calculateBill()">💰 คำนวณยอดโอน</button>
+    <button class="btn-reset" onclick="resetApp()">🔄 เริ่มใหม่</button>
+
+    <div id="resultArea" class="result-box">
+        <h3 style="text-align:center;">🧾 สรุปยอด</h3>
+        <div id="finalResults"></div>
+        <button class="btn-share" onclick="shareToLine()">📲 ส่งเข้าแชทเพื่อน</button>
+    </div>
+</div>
+
+<script>
+    let people = []; 
+    let items = [];  
+    let finalSummaryText = "";
+
+    // 🔥 เริ่มต้น LIFF
+    liff.init({ liffId: "YOUR_LIFF_ID_HERE" }).then(() => {
+        console.log("LIFF Initialized");
+    }).catch((err) => { console.error("LIFF Error", err); });
+
+    function addPerson() {
+        const input = document.getElementById('personName');
+        const name = input.value.trim();
+        if (!name || people.includes(name)) return;
+        people.push(name);
+        input.value = ''; 
+        updateUI();
+    }
+
+    function removePerson(name) {
+        people = people.filter(p => p !== name);
+        items.forEach(i => i.eaters = i.eaters.filter(e => e !== name));
+        updateUI();
+        updateItemsUI();
+    }
+
+    function updateUI() {
+        document.getElementById('peopleList').innerHTML = people.map(p => 
+            `<span class="tag">${p} <span class="del-btn" onclick="removePerson('${p}')">❌</span></span>`).join('');
+        document.getElementById('payerCheckboxes').innerHTML = people.map(p => 
+            `<label><input type="checkbox" value="${p}" checked> ${p}</label>`).join('');
+    }
+
+    function addItem() {
+        const nameInput = document.getElementById('itemName');
+        const priceInput = document.getElementById('itemPrice');
+        const eaters = Array.from(document.querySelectorAll('#payerCheckboxes input:checked')).map(cb => cb.value);
+
+        if (!nameInput.value || !priceInput.value || eaters.length === 0) return alert("กรอกข้อมูลให้ครบดิวะ!");
+
+        items.push({ name: nameInput.value, price: parseFloat(priceInput.value), eaters: eaters });
+        nameInput.value = ''; priceInput.value = ''; nameInput.focus();
+        updateItemsUI();
+    }
+
+    function updateItemsUI() {
+        let total = 0;
+        document.getElementById('itemsList').innerHTML = items.map((item, idx) => {
+            total += item.price;
+            return `<div class="item-row">
+                <div>📌 ${item.name} (${item.price}฿)</div>
+                <span class="del-btn" onclick="removeItem(${idx})">❌</span>
+            </div>`;
+        }).join('');
+        document.getElementById('totalAmountDisplay').innerText = `ยอดรวม: ${total.toLocaleString()} บาท`;
+    }
+
+    function removeItem(idx) { items.splice(idx, 1); updateItemsUI(); }
+
+    function calculateBill() {
+        if (people.length === 0 || items.length === 0) return;
+        let totals = {};
+        people.forEach(p => totals[p] = 0);
+        items.forEach(item => {
+            let share = Math.round((item.price / item.eaters.length) * 100) / 100;
+            item.eaters.forEach(e => totals[e] += share);
+        });
+
+        let sorted = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+        let resDiv = document.getElementById('finalResults');
+        resDiv.innerHTML = '';
+        finalSummaryText = "🧾 สรุปค่าใช้จ่ายวันนี้\n------------------\n";
+
+        sorted.forEach((e, i) => {
+            let isTop = i === 0 && e[1] > 0;
+            resDiv.innerHTML += `<div class="result-item">
+                <span class="${isTop ? 'top-payer' : ''}">${isTop ? '👑 ' : ''}${e[0]}</span>
+                <span class="${isTop ? 'top-payer' : ''}">${e[1].toLocaleString()} ฿</span>
+            </div>`;
+            finalSummaryText += `${isTop ? '👑 ' : ''}${e[0]}: ${e[1].toLocaleString()} บาท\n`;
+        });
+        
+        finalSummaryText += "------------------\nหารแฟร์ๆ โดย 'กี่บาท?' 💸";
+        document.getElementById('resultArea').style.display = 'block';
+    }
+
+    // 🔥 ฟีเจอร์เด็ด: ส่งเข้า LINE ทันที
+    function shareToLine() {
+        if (!liff.isLoggedIn()) { liff.login(); return; }
+        if (liff.isApiAvailable('shareTargetPicker')) {
+            liff.shareTargetPicker([{ type: "text", text: finalSummaryText }]).then((res) => {
+                if (res) liff.closeWindow(); // ส่งเสร็จปิดหน้าต่างเลย
+            });
+        }
+    }
+
+    function resetApp() { if(confirm("เริ่มใหม่นะ?")) location.reload(); }
+</script>
+</body>
+</html>
