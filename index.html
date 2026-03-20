@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>กี่บาท (Kee Baht) - LINE Edition</title>
+    <title>กี่บาท (Kee Baht) - Ware Horse Edition</title>
     
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;700&display=swap" rel="stylesheet">
@@ -23,7 +23,7 @@
         .btn-add { background: #28a745; margin-bottom: 10px; font-size: 14px; }
         .btn-calc { background: #0056b3; padding: 15px; font-size: 18px; }
         .btn-reset { background: #dc3545; opacity: 0.8; }
-        .btn-share { background: #00c300; margin-top: 15px; } /* สีเขียว LINE */
+        .btn-share { background: #00c300; margin-top: 15px; }
         
         .list-box { font-size: 14px; color: #555; margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
         .tag { background: #e9ecef; padding: 5px 10px; border-radius: 15px; display: inline-flex; align-items: center; gap: 5px; }
@@ -44,7 +44,7 @@
 
 <div class="container">
     <h1>กี่บาท?</h1>
-    <p class="subtitle">หารแฟร์ๆ สไตล์ "คนไทยทำอะไปเรื่อย"</p>
+    <p class="subtitle">หารแฟร์ๆ สไตล์ "คนไทยทำไปเรื่อย"</p>
 
     <div class="section">
         <h3>1. ใครอยู่ในตี้บ้าง?</h3>
@@ -80,10 +80,17 @@
     let items = [];  
     let finalSummaryText = "";
 
-    // 🔥 เริ่มต้น LIFF
+    // 🔥 เริ่มต้น LIFF (ID ของนาย)
     liff.init({ liffId: "2009552231-fe9vH84e" }).then(() => {
         console.log("LIFF Initialized");
-    }).catch((err) => { console.error("LIFF Error", err); });
+        // บังคับล็อกอินเพื่อขอสิทธิ์ Share Target Picker ทันทีที่เปิดแอป
+        if (!liff.isLoggedIn()) {
+            liff.login();
+        }
+    }).catch((err) => { 
+        console.error("LIFF Error", err);
+        alert("LIFF Error: " + err.message);
+    });
 
     function addPerson() {
         const input = document.getElementById('personName');
@@ -161,13 +168,31 @@
         document.getElementById('resultArea').style.display = 'block';
     }
 
-    // 🔥 ฟีเจอร์เด็ด: ส่งเข้า LINE ทันที
-    function shareToLine() {
-        if (!liff.isLoggedIn()) { liff.login(); return; }
+    // 🔥 ฟังก์ชันส่งเข้าแชทเพื่อน (แบบ Async ทันใจ)
+    async function shareToLine() {
+        if (!liff.isLoggedIn()) {
+            liff.login();
+            return;
+        }
+
         if (liff.isApiAvailable('shareTargetPicker')) {
-            liff.shareTargetPicker([{ type: "text", text: finalSummaryText }]).then((res) => {
-                if (res) liff.closeWindow(); // ส่งเสร็จปิดหน้าต่างเลย
-            });
+            try {
+                const res = await liff.shareTargetPicker([
+                    {
+                        type: "text",
+                        text: finalSummaryText
+                    }
+                ]);
+                if (res) {
+                    console.log("ส่งสำเร็จ!");
+                    liff.closeWindow(); // ส่งเสร็จปิดหน้าต่างแอปเลย
+                }
+            } catch (error) {
+                console.log("ยกเลิกการส่ง หรือเกิดข้อผิดพลาด", error);
+                alert("เกิดข้อผิดพลาด: " + error.message);
+            }
+        } else {
+            alert("นายยังไม่ได้เปิดฟีเจอร์ Share Target Picker ในหน้า LINE Developers นะเพื่อน!");
         }
     }
 
